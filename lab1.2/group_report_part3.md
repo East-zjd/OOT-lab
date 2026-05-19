@@ -1,8 +1,8 @@
-# 可测试性报告（Lab1.2 → Lab2）
+# 可测试性报告（Lab1.1 → Lab1.2）
 
 本部分按讨论课要求聚焦“可测试性”，内容简明，每部分提炼 2 点亮点与 2 点改进建议，并结合当前代码迭代。
 
-## 1. 架构设计对单元测试成本的降低（亮点 2 点）
+## 1. 架构设计对单元测试成本的降低
 - **依赖注入 + 接口抽象**：`WorkspaceService` 依赖 `FileSystem`、`LogService`、`SpellCheckService`、`StatisticsService` 等接口/服务，测试可替换实现，减少环境成本。
 - 代码示例（迭代前 / 迭代后）：
 ```java
@@ -53,7 +53,7 @@ public static SpellCheckService fromSystemProperties() {
 }
 ```
 
-## 2. 测试隔离手段与差异（亮点 2 点）
+## 2. 测试隔离手段与差异
 - **可控 I/O 与时间**：`FakeConsole`、`FakeClock` 让交互与时钟可预测，减少不稳定因素。
 - 代码示例（迭代前 / 迭代后）：
 ```java
@@ -114,11 +114,11 @@ ExecutionResult exit = reg1.execute("exit");
 assertTrue(exit.shouldExit());
 ```
 
-## 4. 改进点（2 点）
+## 4. 改进点
 - **XML 专属异常覆盖不足**：如 ID 冲突、根节点删除、空文档 `xml-tree`，需要补充单元测试。
 - **统计/拼写切换缺独立用例**：`StatisticsService` 和拼写切换工厂缺少独立测试，影响回归稳定性。
 
-## 5. 对 Lab2 扩展性的结论
+## 5. 对 Lab1.2 扩展性的结论
 - 通过插件包与工厂注入，新增编辑器/拼写实现成本低，符合开闭原则。
 - 当前迭代已完成的代码改动（用代码说明）：
 ```java
