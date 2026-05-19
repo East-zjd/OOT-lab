@@ -70,6 +70,12 @@ public final class DefaultCommandRegistry implements CommandRegistry {
         register("delete", this::handleDelete);
         register("replace", this::handleReplace);
         register("show", this::handleShow);
+        // XML 编辑
+        register("insert-before", this::handleInsertBefore);
+        register("append-child", this::handleAppendChild);
+        register("edit-id", this::handleEditId);
+        register("edit-text", this::handleEditText);
+        register("xml-tree", this::handleXmlTree);
         // 拼写检查
         register("spell-check", this::handleSpellCheck);
         // 日志相关
@@ -148,10 +154,16 @@ public final class DefaultCommandRegistry implements CommandRegistry {
     }
 
     private ExecutionResult handleEditorList(String raw, ParsedCommand c) {
-        // editor-list
-        requireArgs(c, 0);
-        String out = workspace.listEditors();
-        return okAndPublish(out, workspace.activeFileOrNull(), raw);
+        // editor-list [tree]
+        if (c.args().isEmpty()) {
+            String out = workspace.listEditors(false);
+            return okAndPublish(out, workspace.activeFileOrNull(), raw);
+        }
+        if (c.args().size() == 1 && "tree".equals(c.args().get(0))) {
+            String out = workspace.listEditors(true);
+            return okAndPublish(out, workspace.activeFileOrNull(), raw);
+        }
+        throw new IllegalArgumentException("usage: editor-list [tree]");
     }
 
     private ExecutionResult handleDirTree(String raw, ParsedCommand c) {
@@ -204,12 +216,18 @@ public final class DefaultCommandRegistry implements CommandRegistry {
     }
 
     private ExecutionResult handleDelete(String raw, ParsedCommand c) {
-        // delete <line:col> <len>
-        requireArgs(c, 2);
-        LineCol pos = LineCol.parse(c.args().get(0));
-        int len = Integer.parseInt(c.args().get(1));
-        String out = workspace.delete(pos, len);
-        return okAndPublish(out, workspace.activeFileOrNull(), raw);
+        // delete <line:col> <len> | delete <elementId>
+        if (c.args().size() == 1) {
+            String out = workspace.deleteElement(c.args().get(0));
+            return okAndPublish(out, workspace.activeFileOrNull(), raw);
+        }
+        if (c.args().size() == 2) {
+            LineCol pos = LineCol.parse(c.args().get(0));
+            int len = Integer.parseInt(c.args().get(1));
+            String out = workspace.delete(pos, len);
+            return okAndPublish(out, workspace.activeFileOrNull(), raw);
+        }
+        throw new IllegalArgumentException("usage: delete <line:col> <len> | delete <elementId>");
     }
 
     private ExecutionResult handleReplace(String raw, ParsedCommand c) {
@@ -241,10 +259,62 @@ public final class DefaultCommandRegistry implements CommandRegistry {
     }
 
     private ExecutionResult handleSpellCheck(String raw, ParsedCommand c) {
-        // spell-check
-        requireArgs(c, 0);
-        String out = workspace.spellCheck();
+        // spell-check [file]
+        if (c.args().isEmpty()) {
+            String out = workspace.spellCheck(null);
+            return okAndPublish(out, workspace.activeFileOrNull(), raw);
+        }
+        if (c.args().size() == 1) {
+            Path file = Path.of(c.args().get(0));
+            String out = workspace.spellCheck(file);
+            return okAndPublish(out, workspace.activeFileOrNull(), raw);
+        }
+        throw new IllegalArgumentException("usage: spell-check [file]");
+    }
+
+    private ExecutionResult handleInsertBefore(String raw, ParsedCommand c) {
+        // insert-before <tagName> <newId> <targetId> ["text"]
+        requireArgsAtLeast(c, 3);
+        String text = c.args().size() >= 4 ? TextEscapes.unescape(c.args().get(3)) : "";
+        String out = workspace.insertBefore(c.args().get(0), c.args().get(1), c.args().get(2), text);
         return okAndPublish(out, workspace.activeFileOrNull(), raw);
+    }
+
+    private ExecutionResult handleAppendChild(String raw, ParsedCommand c) {
+        // append-child <tagName> <newId> <parentId> ["text"]
+        requireArgsAtLeast(c, 3);
+        String text = c.args().size() >= 4 ? TextEscapes.unescape(c.args().get(3)) : "";
+        String out = workspace.appendChild(c.args().get(0), c.args().get(1), c.args().get(2), text);
+        return okAndPublish(out, workspace.activeFileOrNull(), raw);
+    }
+
+    private ExecutionResult handleEditId(String raw, ParsedCommand c) {
+        // edit-id <oldId> <newId>
+        requireArgs(c, 2);
+        String out = workspace.editId(c.args().get(0), c.args().get(1));
+        return okAndPublish(out, workspace.activeFileOrNull(), raw);
+    }
+
+    private ExecutionResult handleEditText(String raw, ParsedCommand c) {
+        // edit-text <elementId> ["text"]
+        requireArgsAtLeast(c, 1);
+        String text = c.args().size() >= 2 ? TextEscapes.unescape(c.args().get(1)) : "";
+        String out = workspace.editText(c.args().get(0), text);
+        return okAndPublish(out, workspace.activeFileOrNull(), raw);
+    }
+
+    private ExecutionResult handleXmlTree(String raw, ParsedCommand c) {
+        // xml-tree [file]
+        if (c.args().isEmpty()) {
+            String out = workspace.xmlTree(null);
+            return okAndPublish(out, workspace.activeFileOrNull(), raw);
+        }
+        if (c.args().size() == 1) {
+            Path file = Path.of(c.args().get(0));
+            String out = workspace.xmlTree(file);
+            return okAndPublish(out, workspace.activeFileOrNull(), raw);
+        }
+        throw new IllegalArgumentException("usage: xml-tree [file]");
     }
 
     private ExecutionResult handleLogOn(String raw, ParsedCommand c) {

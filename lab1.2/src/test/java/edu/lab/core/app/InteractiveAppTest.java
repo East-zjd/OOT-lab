@@ -90,7 +90,7 @@ class InteractiveAppTest {
         @Override public String closeActive() { throw new UnsupportedOperationException(); }
         @Override public String close(Path file) { throw new UnsupportedOperationException(); }
         @Override public String edit(Path file) { throw new UnsupportedOperationException(); }
-        @Override public String listEditors() { throw new UnsupportedOperationException(); }
+        @Override public String listEditors(boolean tree) { throw new UnsupportedOperationException(); }
         @Override public String dirTree(Path pathOrNull) { throw new UnsupportedOperationException(); }
         @Override public String undo() { throw new UnsupportedOperationException(); }
         @Override public String redo() { throw new UnsupportedOperationException(); }
@@ -106,6 +106,12 @@ class InteractiveAppTest {
         @Override public String delete(LineCol pos, int len) { throw new UnsupportedOperationException(); }
         @Override public String replace(LineCol pos, int len, String text) { throw new UnsupportedOperationException(); }
         @Override public String show(Integer startLineOrNull, Integer endLineOrNull) { throw new UnsupportedOperationException(); }
-        @Override public String spellCheck() { throw new UnsupportedOperationException(); }
+        @Override public String spellCheck(Path fileOrNull) { throw new UnsupportedOperationException(); }
+        @Override public String insertBefore(String tagName, String newId, String targetId, String textOrNull) { throw new UnsupportedOperationException(); }
+        @Override public String appendChild(String tagName, String newId, String parentId, String textOrNull) { throw new UnsupportedOperationException(); }
+        @Override public String editId(String oldId, String newId) { throw new UnsupportedOperationException(); }
+        @Override public String editText(String elementId, String textOrNull) { throw new UnsupportedOperationException(); }
+        @Override public String deleteElement(String elementId) { throw new UnsupportedOperationException(); }
+        @Override public String xmlTree(Path fileOrNull) { throw new UnsupportedOperationException(); }
     }
 }

@@ -10,8 +10,11 @@ import edu.lab.core.fs.FileSystem;
 import edu.lab.core.fs.LocalFileSystem;
 import edu.lab.core.logging.LogService;
 import edu.lab.core.logging.WorkspaceLogService;
-import edu.lab.core.persistence.WorkspacePersistence;
 import edu.lab.core.persistence.PropertiesWorkspacePersistence;
+import edu.lab.core.persistence.WorkspacePersistence;
+import edu.lab.core.spell.SpellCheckService;
+import edu.lab.core.spell.SpellCheckServiceFactory;
+import edu.lab.core.stats.StatisticsService;
 import edu.lab.core.time.Clock;
 import edu.lab.core.time.SystemClock;
 import edu.lab.core.workspace.Workspace;
@@ -47,9 +50,13 @@ public final class AppFactory {
         WorkspacePersistence persistence = new PropertiesWorkspacePersistence(fileSystem, Path.of(".workspace.state.properties"));
         // 日志服务（记录命令历史到隐藏的 .xxx.log 文件）
         LogService logService = new WorkspaceLogService(fileSystem, clock, console);
+        // 拼写检查服务（可通过系统属性切换实现）
+        SpellCheckService spellCheckService = SpellCheckServiceFactory.fromSystemProperties();
+        // 统计服务（订阅编辑器切换事件）
+        StatisticsService statisticsService = new StatisticsService(eventBus, clock);
 
         // 工作区：编辑器集合 + 文件/撤销重做/日志等
-        Workspace workspace = new WorkspaceService(fileSystem, persistence, eventBus, logService, console);
+        Workspace workspace = new WorkspaceService(fileSystem, persistence, eventBus, logService, console, spellCheckService, statisticsService);
         // 命令注册表：将字符串命令分发到具体 handler
         CommandRegistry registry = new DefaultCommandRegistry(workspace, eventBus);
 

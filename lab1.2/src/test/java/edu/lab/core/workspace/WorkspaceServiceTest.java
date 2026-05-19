@@ -10,6 +10,9 @@ import edu.lab.core.logging.LogService;
 import edu.lab.core.logging.WorkspaceLogService;
 import edu.lab.core.persistence.PropertiesWorkspacePersistence;
 import edu.lab.core.persistence.WorkspacePersistence;
+import edu.lab.core.spell.DictionarySpellCheckAdapter;
+import edu.lab.core.spell.SpellCheckService;
+import edu.lab.core.stats.StatisticsService;
 import edu.lab.testkit.FakeClock;
 import edu.lab.testkit.FakeConsole;
 import org.junit.jupiter.api.Test;
@@ -39,9 +42,11 @@ class WorkspaceServiceTest {
         FakeClock clock = new FakeClock(LocalDateTime.of(2025, 10, 24, 9, 41, 33));
         EventBus bus = new SimpleEventBus();
         LogService log = new WorkspaceLogService(fs, clock, console);
+        SpellCheckService spellCheckService = DictionarySpellCheckAdapter.defaultEnglish();
+        StatisticsService stats = new StatisticsService(bus, clock);
         WorkspacePersistence persistence = new PropertiesWorkspacePersistence(fs, temp.resolve(".state.properties"));
 
-        Workspace ws1 = new WorkspaceService(fs, persistence, bus, log, console);
+        Workspace ws1 = new WorkspaceService(fs, persistence, bus, log, console, spellCheckService, stats);
         CommandRegistry reg1 = new DefaultCommandRegistry(ws1, bus);
 
         Path file = temp.resolve("lab.txt");
@@ -67,7 +72,8 @@ class WorkspaceServiceTest {
         // Restore into a new workspace instance
         FakeConsole console2 = new FakeConsole().addInputs("n", "n", "n");
         LogService log2 = new WorkspaceLogService(fs, clock, console2);
-        Workspace ws2 = new WorkspaceService(fs, persistence, bus, log2, console2);
+        StatisticsService stats2 = new StatisticsService(bus, clock);
+        Workspace ws2 = new WorkspaceService(fs, persistence, bus, log2, console2, spellCheckService, stats2);
         ws2.restore();
 
         // restore 后应自动打开并选中活动文件
@@ -91,9 +97,11 @@ class WorkspaceServiceTest {
         FakeClock clock = new FakeClock(LocalDateTime.of(2025, 10, 24, 9, 41, 33));
         EventBus bus = new SimpleEventBus();
         LogService log = new WorkspaceLogService(fs, clock, console);
+        SpellCheckService spellCheckService = DictionarySpellCheckAdapter.defaultEnglish();
+        StatisticsService stats = new StatisticsService(bus, clock);
         WorkspacePersistence persistence = new PropertiesWorkspacePersistence(fs, temp.resolve(".state.properties"));
 
-        Workspace ws = new WorkspaceService(fs, persistence, bus, log, console);
+        Workspace ws = new WorkspaceService(fs, persistence, bus, log, console, spellCheckService, stats);
         CommandRegistry reg = new DefaultCommandRegistry(ws, bus);
 
         Path file = temp.resolve("a.txt");
@@ -114,9 +122,11 @@ class WorkspaceServiceTest {
         FakeClock clock = new FakeClock(LocalDateTime.of(2025, 10, 24, 9, 41, 33));
         EventBus bus = new SimpleEventBus();
         LogService log = new WorkspaceLogService(fs, clock, console);
+        SpellCheckService spellCheckService = DictionarySpellCheckAdapter.defaultEnglish();
+        StatisticsService stats = new StatisticsService(bus, clock);
         WorkspacePersistence persistence = new PropertiesWorkspacePersistence(fs, temp.resolve(".state.properties"));
 
-        Workspace ws = new WorkspaceService(fs, persistence, bus, log, console);
+        Workspace ws = new WorkspaceService(fs, persistence, bus, log, console, spellCheckService, stats);
         CommandRegistry reg = new DefaultCommandRegistry(ws, bus);
 
         Path file = temp.resolve("lab.txt");
@@ -140,9 +150,11 @@ class WorkspaceServiceTest {
         FakeClock clock = new FakeClock(LocalDateTime.of(2025, 10, 24, 9, 41, 33));
         EventBus bus = new SimpleEventBus();
         LogService log = new WorkspaceLogService(fs, clock, console);
+        SpellCheckService spellCheckService = DictionarySpellCheckAdapter.defaultEnglish();
+        StatisticsService stats = new StatisticsService(bus, clock);
         WorkspacePersistence persistence = new PropertiesWorkspacePersistence(fs, temp.resolve(".state.properties"));
 
-        Workspace ws = new WorkspaceService(fs, persistence, bus, log, console);
+        Workspace ws = new WorkspaceService(fs, persistence, bus, log, console, spellCheckService, stats);
         CommandRegistry reg = new DefaultCommandRegistry(ws, bus);
 
         Path file1 = temp.resolve("lab.txt");
@@ -156,7 +168,7 @@ class WorkspaceServiceTest {
 
         // 活动编辑器为第二个文件时，第一个文件前仍应保留两个空格前缀
         String out = reg.execute("editor-list").output();
-        assertEquals("  lab.txt\n* lab1.txt", out);
+        assertEquals("  lab.txt (0秒)\n* lab1.txt (0秒)", out);
     }
 
     @Test
@@ -166,9 +178,11 @@ class WorkspaceServiceTest {
         FakeClock clock = new FakeClock(LocalDateTime.of(2025, 10, 24, 9, 41, 33));
         EventBus bus = new SimpleEventBus();
         LogService log = new WorkspaceLogService(fs, clock, console);
+        SpellCheckService spellCheckService = DictionarySpellCheckAdapter.defaultEnglish();
+        StatisticsService stats = new StatisticsService(bus, clock);
         WorkspacePersistence persistence = new PropertiesWorkspacePersistence(fs, temp.resolve(".state.properties"));
 
-        Workspace ws1 = new WorkspaceService(fs, persistence, bus, log, console);
+        Workspace ws1 = new WorkspaceService(fs, persistence, bus, log, console, spellCheckService, stats);
         CommandRegistry reg1 = new DefaultCommandRegistry(ws1, bus);
 
         Path file = temp.resolve("dirty.txt");
@@ -184,7 +198,8 @@ class WorkspaceServiceTest {
         // 新实例恢复后，文件仍应保持 modified 状态
         FakeConsole console2 = new FakeConsole().addInputs("n", "n", "n");
         LogService log2 = new WorkspaceLogService(fs, clock, console2);
-        Workspace ws2 = new WorkspaceService(fs, persistence, bus, log2, console2);
+        StatisticsService stats2 = new StatisticsService(bus, clock);
+        Workspace ws2 = new WorkspaceService(fs, persistence, bus, log2, console2, spellCheckService, stats2);
         ws2.restore();
 
         assertTrue(ws2.isOpen(file));
@@ -199,9 +214,11 @@ class WorkspaceServiceTest {
         FakeClock clock = new FakeClock(LocalDateTime.of(2025, 10, 24, 9, 41, 33));
         EventBus bus = new SimpleEventBus();
         LogService log = new WorkspaceLogService(fs, clock, console);
+        SpellCheckService spellCheckService = DictionarySpellCheckAdapter.defaultEnglish();
+        StatisticsService stats = new StatisticsService(bus, clock);
         WorkspacePersistence persistence = new PropertiesWorkspacePersistence(fs, temp.resolve(".state.properties"));
 
-        Workspace ws1 = new WorkspaceService(fs, persistence, bus, log, console);
+        Workspace ws1 = new WorkspaceService(fs, persistence, bus, log, console, spellCheckService, stats);
         CommandRegistry reg1 = new DefaultCommandRegistry(ws1, bus);
 
         // 加载一个不存在的文件：根据 lab1.md，应创建空文件并标记为 modified
@@ -213,7 +230,8 @@ class WorkspaceServiceTest {
 
         FakeConsole console2 = new FakeConsole().addInputs("n");
         LogService log2 = new WorkspaceLogService(fs, clock, console2);
-        Workspace ws2 = new WorkspaceService(fs, persistence, bus, log2, console2);
+        StatisticsService stats2 = new StatisticsService(bus, clock);
+        Workspace ws2 = new WorkspaceService(fs, persistence, bus, log2, console2, spellCheckService, stats2);
         ws2.restore();
 
         assertTrue(ws2.isOpen(file));

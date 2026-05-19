@@ -23,6 +23,11 @@ public abstract class EditorDecorator implements Editor {
     }
 
     @Override
+    public EditorKind kind() {
+        return delegate.kind();
+    }
+
+    @Override
     public boolean isModified() {
         return delegate.isModified();
     }
@@ -80,6 +85,36 @@ public abstract class EditorDecorator implements Editor {
     @Override
     public String spellCheck() {
         return delegate.spellCheck();
+    }
+
+    @Override
+    public String insertBefore(String tagName, String newId, String targetId, String textOrNull) {
+        return delegate.insertBefore(tagName, newId, targetId, textOrNull);
+    }
+
+    @Override
+    public String appendChild(String tagName, String newId, String parentId, String textOrNull) {
+        return delegate.appendChild(tagName, newId, parentId, textOrNull);
+    }
+
+    @Override
+    public String editId(String oldId, String newId) {
+        return delegate.editId(oldId, newId);
+    }
+
+    @Override
+    public String editText(String elementId, String textOrNull) {
+        return delegate.editText(elementId, textOrNull);
+    }
+
+    @Override
+    public String deleteElement(String elementId) {
+        return delegate.deleteElement(elementId);
+    }
+
+    @Override
+    public String xmlTree() {
+        return delegate.xmlTree();
     }
 
     @Override

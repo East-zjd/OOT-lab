@@ -7,6 +7,9 @@ import edu.lab.core.logging.LogService;
 import edu.lab.core.logging.WorkspaceLogService;
 import edu.lab.core.persistence.PropertiesWorkspacePersistence;
 import edu.lab.core.persistence.WorkspacePersistence;
+import edu.lab.core.spell.DictionarySpellCheckAdapter;
+import edu.lab.core.spell.SpellCheckService;
+import edu.lab.core.stats.StatisticsService;
 import edu.lab.core.workspace.Workspace;
 import edu.lab.core.workspace.WorkspaceService;
 import edu.lab.testkit.FakeClock;
@@ -38,13 +41,16 @@ class CommandChecklistRegressionTest {
         FakeClock clock = new FakeClock(LocalDateTime.of(2025, 10, 24, 9, 41, 33));
         EventBus bus = new SimpleEventBus();
         LogService log = new WorkspaceLogService(fs, clock, console);
+        SpellCheckService spellCheckService = DictionarySpellCheckAdapter.defaultEnglish();
+        StatisticsService stats = new StatisticsService(bus, clock);
         WorkspacePersistence persistence = new PropertiesWorkspacePersistence(fs, temp.resolve(".state.properties"));
 
-        Workspace ws = new WorkspaceService(fs, persistence, bus, log, console);
+        Workspace ws = new WorkspaceService(fs, persistence, bus, log, console, spellCheckService, stats);
         CommandRegistry reg = new DefaultCommandRegistry(ws, bus);
 
         Path file1 = temp.resolve("a.txt");
         Path file2 = temp.resolve("b.txt");
+        Path xmlFile = temp.resolve("c.xml");
         Files.writeString(file2, "Hello", StandardCharsets.UTF_8);
 
         // init + with-log：新建文件并开启日志
@@ -89,6 +95,15 @@ class CommandChecklistRegressionTest {
 
         ExecutionResult logShow = reg.execute("log-show");
         assertFalse(logShow.output().isEmpty());
+
+        // XML 编辑命令
+        assertOk(reg.execute("init \"" + xmlFile + "\""));
+        assertOk(reg.execute("append-child book book1 root \"Hello\""));
+        assertOk(reg.execute("insert-before book book0 book1 \"\""));
+        assertOk(reg.execute("edit-text book1 \"Title\""));
+        assertOk(reg.execute("edit-id book1 book001"));
+        assertOk(reg.execute("xml-tree"));
+        assertOk(reg.execute("delete book001"));
 
         // close 与 exit
         assertOk(reg.execute("close"));

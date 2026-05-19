@@ -1,6 +1,7 @@
 package edu.lab.core.editor;
 
 import edu.lab.core.workspace.LineCol;
+import edu.lab.core.spell.DictionarySpellCheckAdapter;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
@@ -65,7 +66,7 @@ class TextEditorTest {
     void decorators_add_log_and_spellcheck_capabilities() {
         Editor ed = new SpellCheckEditorDecorator(
                 new LoggableEditorDecorator(new TextEditor(Path.of("a.txt"), List.of("helo world"), true)),
-                TextEditor.SpellChecker.defaultEnglish()
+            DictionarySpellCheckAdapter.defaultEnglish()
         );
 
         assertFalse(ed.isLogEnabled());
@@ -73,6 +74,6 @@ class TextEditorTest {
         assertTrue(ed.isLogEnabled());
 
         String out = ed.spellCheck();
-        assertTrue(out.contains("1:1 helo"));
+        assertTrue(out.contains("第1行"));
     }
 }

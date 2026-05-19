@@ -6,11 +6,6 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
-import java.util.Locale;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * 基于“按行存储”的文本编辑器实现。
@@ -24,9 +19,6 @@ import java.util.regex.Pattern;
  * </ul>
  */
 public final class TextEditor implements Editor {
-    // 单词匹配：仅匹配英文字母单词，允许包含一次撇号（如 don't）
-    private static final Pattern WORD = Pattern.compile("[A-Za-z]+(?:'[A-Za-z]+)?");
-
     private static final String ERR_OOB = "行号或列号越界";
     private static final String ERR_DELETE_LEN_INVALID = "删除长度不合法";
     private static final String ERR_DELETE_PAST_END = "删除长度超出行尾";
@@ -54,6 +46,11 @@ public final class TextEditor implements Editor {
     @Override
     public java.nio.file.Path file() {
         return file;
+    }
+
+    @Override
+    public EditorKind kind() {
+        return EditorKind.TEXT;
     }
 
     @Override
@@ -287,59 +284,6 @@ public final class TextEditor implements Editor {
     public static boolean shouldAutoEnableLog(List<String> loadedLines) {
         // 文件第一行是 "# log" 时自动开启日志
         return !loadedLines.isEmpty() && "# log".equals(loadedLines.get(0).trim());
-    }
-
-    public interface SpellChecker {
-        Set<SpellIssue> check(List<String> lines);
-
-        /**
-         * 创建一个默认的英文拼写检查器（小型内置词典）。
-         */
-        static SpellChecker defaultEnglish() {
-            Set<String> dict = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
-            dict.addAll(Set.of(
-                    "a", "an", "and", "are", "as", "at", "be", "brown", "code", "contains", "day", "dog",
-                    "extra", "fox", "good", "hello", "is", "it", "jumps", "lazy", "line", "new", "of",
-                    "over", "quick", "spaces", "test", "the", "this", "today", "world", "write", "writing"
-            ));
-            return new DictionarySpellChecker(dict);
-        }
-    }
-
-    public record SpellIssue(int line, int col, String word) implements Comparable<SpellIssue> {
-        @Override
-        public int compareTo(SpellIssue o) {
-            int c1 = Integer.compare(line, o.line);
-            if (c1 != 0) return c1;
-            int c2 = Integer.compare(col, o.col);
-            if (c2 != 0) return c2;
-            return word.compareToIgnoreCase(o.word);
-        }
-    }
-
-    private static final class DictionarySpellChecker implements SpellChecker {
-        private final Set<String> dictionary;
-
-        private DictionarySpellChecker(Set<String> dictionary) {
-            this.dictionary = dictionary;
-        }
-
-        @Override
-        public Set<SpellIssue> check(List<String> lines) {
-            Set<SpellIssue> issues = new TreeSet<>();
-            for (int i = 0; i < lines.size(); i++) {
-                String line = lines.get(i);
-                Matcher m = WORD.matcher(line);
-                while (m.find()) {
-                    String word = m.group();
-                    // 词典匹配不区分大小写：统一 lower 后判断
-                    if (!dictionary.contains(word.toLowerCase(Locale.ROOT))) {
-                        issues.add(new SpellIssue(i + 1, m.start() + 1, word));
-                    }
-                }
-            }
-            return issues;
-        }
     }
 
     private record SnapshotEdit(List<String> before, List<String> after) {

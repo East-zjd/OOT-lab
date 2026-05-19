@@ -2,14 +2,22 @@ package edu.lab.core.workspace;
 
 import edu.lab.core.console.Console;
 import edu.lab.core.editor.Editor;
+import edu.lab.core.editor.EditorKind;
 import edu.lab.core.editor.LoggableEditorDecorator;
+import edu.lab.core.editor.ModifiedEditorDecorator;
 import edu.lab.core.editor.SpellCheckEditorDecorator;
 import edu.lab.core.editor.TextEditor;
 import edu.lab.core.events.CommandExecutedEvent;
+import edu.lab.core.events.EditorActivatedEvent;
+import edu.lab.core.events.EditorClosedEvent;
+import edu.lab.core.events.EditorDeactivatedEvent;
 import edu.lab.core.events.EventBus;
 import edu.lab.core.fs.FileSystem;
 import edu.lab.core.logging.LogService;
 import edu.lab.core.persistence.WorkspacePersistence;
+import edu.lab.core.spell.SpellCheckService;
+import edu.lab.core.stats.StatisticsService;
+import edu.lab.plugins.xml.XmlEditor;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -37,6 +45,9 @@ public final class WorkspaceService implements Workspace {
     private final WorkspacePersistence persistence;
     private final LogService logService;
     private final Console console;
+    private final EventBus eventBus;
+    private final SpellCheckService spellCheckService;
+    private final StatisticsService statistics;
 
     private final Map<Path, Editor> openEditors = new LinkedHashMap<>();
     private final Deque<Path> mru = new ArrayDeque<>();
@@ -49,11 +60,16 @@ public final class WorkspaceService implements Workspace {
                            WorkspacePersistence persistence,
                            EventBus eventBus,
                            LogService logService,
-                           Console console) {
+                           Console console,
+                           SpellCheckService spellCheckService,
+                           StatisticsService statistics) {
         this.fileSystem = fileSystem;
         this.persistence = persistence;
         this.logService = logService;
         this.console = console;
+        this.eventBus = eventBus;
+        this.spellCheckService = spellCheckService;
+        this.statistics = statistics;
 
         // 订阅“命令已执行”事件：如果该文件开启日志，则追加一条命令到日志文件
         eventBus.subscribe(CommandExecutedEvent.class, ev -> {
@@ -79,7 +95,7 @@ public final class WorkspaceService implements Workspace {
             List<String> lines = readFileOrEmpty(p);
             // 根据快照中的 modified 决定是否初始化保存基线：
             // modified=false => 视为已保存；modified=true => 视为存在未保存改动（哪怕内容为空）。
-            Editor ed = decorate(new TextEditor(p, lines, !es.modified()));
+            Editor ed = createEditor(p, lines, !es.modified());
             ed.setLogEnabled(es.logEnabled());
             if (es.logEnabled()) {
                 logService.enable(p);
@@ -97,6 +113,9 @@ public final class WorkspaceService implements Workspace {
             // 若快照中没有活动文件，则默认选择第一个打开的编辑器
             active = openEditors.keySet().iterator().next();
         }
+        if (active != null) {
+            eventBus.publish(new EditorActivatedEvent(active));
+        }
     }
 
     @Override
@@ -104,8 +123,7 @@ public final class WorkspaceService implements Workspace {
         Path p = normalize(file);
         if (openEditors.containsKey(p)) {
             // 已打开：只切换为活动编辑器即可
-            active = p;
-            touchMru(p);
+            switchActive(p);
             return "已打开: " + p;
         }
 
@@ -120,7 +138,7 @@ public final class WorkspaceService implements Workspace {
         }
 
         List<String> lines = readFileOrEmpty(p);
-        Editor ed = decorate(new TextEditor(p, lines, exists));
+        Editor ed = createEditor(p, lines, exists);
         boolean autoLog = TextEditor.shouldAutoEnableLog(lines);
         if (autoLog) {
             // 文件首行是 # log 时自动开启日志
@@ -128,8 +146,7 @@ public final class WorkspaceService implements Workspace {
             logService.enable(p);
         }
         openEditors.put(p, ed);
-        active = p;
-        touchMru(p);
+        switchActive(p);
         return "ok";
     }
 
@@ -137,15 +154,14 @@ public final class WorkspaceService implements Workspace {
     public String init(Path file, boolean withLog) {
         // 初始化一个新文件编辑器（默认不落盘；保存时才写入）
         Path p = normalize(file);
-        List<String> lines = withLog ? List.of("# log") : List.of();
-        Editor ed = decorate(new TextEditor(p, lines, false));
+        List<String> lines = initialLinesFor(p, withLog);
+        Editor ed = createEditor(p, lines, false);
         if (withLog) {
             ed.setLogEnabled(true);
             logService.enable(p);
         }
         openEditors.put(p, ed);
-        active = p;
-        touchMru(p);
+        switchActive(p);
         return "ok";
     }
 
@@ -218,11 +234,21 @@ public final class WorkspaceService implements Workspace {
             }
         }
 
+        boolean wasActive = p.equals(active);
+        if (wasActive) {
+            eventBus.publish(new EditorDeactivatedEvent(p));
+        }
         openEditors.remove(p);
         mru.remove(p);
-        if (p.equals(active)) {
+        eventBus.publish(new EditorClosedEvent(p));
+        if (wasActive) {
             // 若关闭的是活动编辑器，则将最近使用的下一个设为活动编辑器
-            active = mru.peekFirst();
+            Path next = mru.peekFirst();
+            if (next != null) {
+                switchActive(next);
+            } else {
+                active = null;
+            }
         }
         return "ok";
     }
@@ -233,33 +259,16 @@ public final class WorkspaceService implements Workspace {
         if (!openEditors.containsKey(p)) {
             return "文件未打开: " + file;
         }
-        active = p;
-        touchMru(p);
+        switchActive(p);
         return "ok";
     }
 
     @Override
-    public String listEditors() {
-        // 按打开顺序列出编辑器，并用 * 标记当前活动编辑器
-        StringBuilder sb = new StringBuilder();
-        for (var entry : openEditors.entrySet()) {
-            Path p = entry.getKey();
-            Editor ed = entry.getValue();
-            sb.append(p.equals(active) ? "* " : "  ");
-            sb.append(p.getFileName());
-            if (ed.isModified()) {
-                sb.append(" [modified]");
-            }
-            sb.append('\n');
-        }
-        if (sb.isEmpty()) {
+    public String listEditors(boolean tree) {
+        if (openEditors.isEmpty()) {
             return "(empty)";
         }
-        // 只移除最后的换行，不能用 trim()，否则会误删第一行前导空格（非活动文件的 "  " 前缀）
-        if (sb.charAt(sb.length() - 1) == '\n') {
-            sb.setLength(sb.length() - 1);
-        }
-        return sb.toString();
+        return tree ? listEditorsTree() : listEditorsFlat();
     }
 
     @Override
@@ -301,6 +310,12 @@ public final class WorkspaceService implements Workspace {
                     save(p);
                 }
             }
+        }
+        if (active != null) {
+            eventBus.publish(new EditorDeactivatedEvent(active));
+        }
+        for (Path p : new ArrayList<>(openEditors.keySet())) {
+            eventBus.publish(new EditorClosedEvent(p));
         }
         // 保存工作区快照，便于下次启动恢复
         persistence.save(snapshot());
@@ -366,6 +381,9 @@ public final class WorkspaceService implements Workspace {
         if (ed == null) {
             return "(error) no active editor";
         }
+        if (ed.kind() != EditorKind.TEXT) {
+            return "不支持";
+        }
         return safeEditorCall(() -> ed.append(text));
     }
 
@@ -374,6 +392,9 @@ public final class WorkspaceService implements Workspace {
         Editor ed = activeEditorOrNull();
         if (ed == null) {
             return "(error) no active editor";
+        }
+        if (ed.kind() != EditorKind.TEXT) {
+            return "不支持";
         }
         return safeEditorCall(() -> ed.insert(pos, text));
     }
@@ -384,6 +405,9 @@ public final class WorkspaceService implements Workspace {
         if (ed == null) {
             return "(error) no active editor";
         }
+        if (ed.kind() != EditorKind.TEXT) {
+            return "不支持";
+        }
         return safeEditorCall(() -> ed.delete(pos, len));
     }
 
@@ -392,6 +416,9 @@ public final class WorkspaceService implements Workspace {
         Editor ed = activeEditorOrNull();
         if (ed == null) {
             return "(error) no active editor";
+        }
+        if (ed.kind() != EditorKind.TEXT) {
+            return "不支持";
         }
         return safeEditorCall(() -> ed.replace(pos, len, text));
     }
@@ -402,16 +429,99 @@ public final class WorkspaceService implements Workspace {
         if (ed == null) {
             return "(error) no active editor";
         }
+        if (ed.kind() != EditorKind.TEXT) {
+            return "不支持";
+        }
         return ed.show(startLineOrNull, endLineOrNull);
     }
 
     @Override
-    public String spellCheck() {
+    public String spellCheck(Path fileOrNull) {
+        Editor ed = resolveEditor(fileOrNull);
+        if (ed == null) {
+            return "(error) no target editor";
+        }
+        return ed.spellCheck();
+    }
+
+    @Override
+    public String insertBefore(String tagName, String newId, String targetId, String textOrNull) {
         Editor ed = activeEditorOrNull();
         if (ed == null) {
             return "(error) no active editor";
         }
-        return ed.spellCheck();
+        if (ed.kind() != EditorKind.XML) {
+            return "不支持";
+        }
+        return safeEditorCall(() -> ed.insertBefore(tagName, newId, targetId, textOrNull));
+    }
+
+    @Override
+    public String appendChild(String tagName, String newId, String parentId, String textOrNull) {
+        Editor ed = activeEditorOrNull();
+        if (ed == null) {
+            return "(error) no active editor";
+        }
+        if (ed.kind() != EditorKind.XML) {
+            return "不支持";
+        }
+        return safeEditorCall(() -> ed.appendChild(tagName, newId, parentId, textOrNull));
+    }
+
+    @Override
+    public String editId(String oldId, String newId) {
+        Editor ed = activeEditorOrNull();
+        if (ed == null) {
+            return "(error) no active editor";
+        }
+        if (ed.kind() != EditorKind.XML) {
+            return "不支持";
+        }
+        return safeEditorCall(() -> ed.editId(oldId, newId));
+    }
+
+    @Override
+    public String editText(String elementId, String textOrNull) {
+        Editor ed = activeEditorOrNull();
+        if (ed == null) {
+            return "(error) no active editor";
+        }
+        if (ed.kind() != EditorKind.XML) {
+            return "不支持";
+        }
+        return safeEditorCall(() -> ed.editText(elementId, textOrNull));
+    }
+
+    @Override
+    public String deleteElement(String elementId) {
+        Editor ed = activeEditorOrNull();
+        if (ed == null) {
+            return "(error) no active editor";
+        }
+        if (ed.kind() != EditorKind.XML) {
+            return "不支持";
+        }
+        return safeEditorCall(() -> ed.deleteElement(elementId));
+    }
+
+    @Override
+    public String xmlTree(Path fileOrNull) {
+        Editor ed = resolveEditor(fileOrNull);
+        if (ed != null) {
+            if (ed.kind() != EditorKind.XML) {
+                return "不支持";
+            }
+            return ed.xmlTree();
+        }
+        if (fileOrNull == null) {
+            return "(error) no target editor";
+        }
+        if (!isXml(fileOrNull)) {
+            return "不支持";
+        }
+        List<String> lines = readFileOrEmpty(normalize(fileOrNull));
+        Editor temp = new XmlEditor(fileOrNull, lines, spellCheckService);
+        return temp.xmlTree();
     }
 
     private WorkspaceSnapshot snapshot() {
@@ -428,6 +538,22 @@ public final class WorkspaceService implements Workspace {
         // 更新最近使用顺序：移除旧位置并放到队首
         mru.remove(p);
         mru.addFirst(p);
+    }
+
+    private void switchActive(Path p) {
+        if (p == null) {
+            return;
+        }
+        if (p.equals(active)) {
+            touchMru(p);
+            return;
+        }
+        if (active != null) {
+            eventBus.publish(new EditorDeactivatedEvent(active));
+        }
+        active = p;
+        touchMru(p);
+        eventBus.publish(new EditorActivatedEvent(p));
     }
 
     private Editor activeEditorOrNull() {
@@ -457,6 +583,33 @@ public final class WorkspaceService implements Workspace {
         return fileSystem.normalize(p);
     }
 
+    private Editor createEditor(Path path, List<String> lines, boolean markSaved) {
+        if (isXml(path)) {
+            Editor core = new XmlEditor(path, lines, spellCheckService);
+            return decorateXml(core, markSaved);
+        }
+        return decorateText(new TextEditor(path, lines, markSaved));
+    }
+
+    private List<String> initialLinesFor(Path file, boolean withLog) {
+        if (isXml(file)) {
+            List<String> base = new ArrayList<>();
+            if (withLog) {
+                base.add("# log");
+            }
+            base.add("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+            base.add("<root id=\"root\">");
+            base.add("</root>");
+            return base;
+        }
+        return withLog ? List.of("# log") : List.of();
+    }
+
+    private boolean isXml(Path file) {
+        String name = file.getFileName().toString().toLowerCase();
+        return name.endsWith(".xml");
+    }
+
     private String safeEditorCall(UnsafeStringSupplier action) {
         try {
             return action.get();
@@ -474,11 +627,124 @@ public final class WorkspaceService implements Workspace {
         String get();
     }
 
-    private static Editor decorate(Editor core) {
-        // 先添加日志能力，再叠加拼写检查能力
+    private Editor decorateText(Editor core) {
         return new SpellCheckEditorDecorator(
                 new LoggableEditorDecorator(core),
-                TextEditor.SpellChecker.defaultEnglish()
+                spellCheckService
         );
+    }
+
+    private Editor decorateXml(Editor core, boolean markSaved) {
+        return new ModifiedEditorDecorator(new LoggableEditorDecorator(core), !markSaved);
+    }
+
+    private String listEditorsFlat() {
+        StringBuilder sb = new StringBuilder();
+        for (var entry : openEditors.entrySet()) {
+            Path p = entry.getKey();
+            Editor ed = entry.getValue();
+            sb.append(p.equals(active) ? "* " : "  ");
+            sb.append(p.getFileName());
+            if (ed.isModified()) {
+                sb.append(" [modified]");
+            }
+            sb.append(" (").append(statistics.formatDuration(p)).append(")");
+            sb.append('\n');
+        }
+        if (sb.charAt(sb.length() - 1) == '\n') {
+            sb.setLength(sb.length() - 1);
+        }
+        return sb.toString();
+    }
+
+    private String listEditorsTree() {
+        Path root = commonRoot();
+        TreeNode tree = TreeNode.build(root, openEditors);
+        StringBuilder sb = new StringBuilder();
+        sb.append(root.toString()).append('\n');
+        tree.render(sb, "", p -> formatTreeFile(p, openEditors.get(p)));
+        if (sb.charAt(sb.length() - 1) == '\n') {
+            sb.setLength(sb.length() - 1);
+        }
+        return sb.toString();
+    }
+
+    private String formatTreeFile(Path p, Editor ed) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(p.equals(active) ? "* " : "  ");
+        sb.append(p.getFileName());
+        if (ed.isModified()) {
+            sb.append(" [modified]");
+        }
+        sb.append(" (").append(statistics.formatDuration(p)).append(")");
+        return sb.toString();
+    }
+
+    private Path commonRoot() {
+        Path root = null;
+        for (Path p : openEditors.keySet()) {
+            Path abs = p.toAbsolutePath().normalize();
+            if (root == null) {
+                root = abs.getParent();
+            } else {
+                root = commonPrefix(root, abs.getParent());
+            }
+        }
+        return root == null ? Path.of(".").toAbsolutePath().normalize() : root;
+    }
+
+    private Path commonPrefix(Path a, Path b) {
+        int count = Math.min(a.getNameCount(), b.getNameCount());
+        Path result = a.getRoot();
+        for (int i = 0; i < count; i++) {
+            if (!a.getName(i).equals(b.getName(i))) {
+                break;
+            }
+            result = result == null ? a.getName(i) : result.resolve(a.getName(i));
+        }
+        return result == null ? Path.of(".") : result;
+    }
+
+    private static final class TreeNode {
+        private final String name;
+        private final Map<String, TreeNode> children = new LinkedHashMap<>();
+        private Path filePath;
+
+        private TreeNode(String name) {
+            this.name = name;
+        }
+
+        private static TreeNode build(Path root, Map<Path, Editor> openEditors) {
+            TreeNode node = new TreeNode(root.toString());
+            for (Path path : openEditors.keySet()) {
+                Path relative = root.relativize(path.toAbsolutePath().normalize());
+                TreeNode cur = node;
+                for (int i = 0; i < relative.getNameCount(); i++) {
+                    String part = relative.getName(i).toString();
+                    cur = cur.children.computeIfAbsent(part, TreeNode::new);
+                }
+                cur.filePath = path;
+            }
+            return node;
+        }
+
+        private void render(StringBuilder sb, String prefix, java.util.function.Function<Path, String> formatter) {
+            int index = 0;
+            int size = children.size();
+            for (TreeNode child : children.values()) {
+                boolean isLast = index == size - 1;
+                sb.append(prefix).append(isLast ? "└── " : "├── ");
+                if (child.filePath != null) {
+                    sb.append(formatter.apply(child.filePath));
+                } else {
+                    sb.append(child.name);
+                }
+                sb.append('\n');
+                if (!child.children.isEmpty()) {
+                    child.render(sb, prefix + (isLast ? "    " : "│   "), formatter);
+                }
+                index++;
+            }
+        }
     }
 }

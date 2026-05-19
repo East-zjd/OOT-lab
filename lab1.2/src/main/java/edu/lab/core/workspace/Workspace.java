@@ -30,7 +30,7 @@ public interface Workspace {
 
     String edit(Path file);
 
-    String listEditors();
+    String listEditors(boolean tree);
 
     String dirTree(Path pathOrNull);
 
@@ -69,5 +69,17 @@ public interface Workspace {
 
     String show(Integer startLineOrNull, Integer endLineOrNull);
 
-    String spellCheck();
+    String spellCheck(Path fileOrNull);
+
+    String insertBefore(String tagName, String newId, String targetId, String textOrNull);
+
+    String appendChild(String tagName, String newId, String parentId, String textOrNull);
+
+    String editId(String oldId, String newId);
+
+    String editText(String elementId, String textOrNull);
+
+    String deleteElement(String elementId);
+
+    String xmlTree(Path fileOrNull);
 }

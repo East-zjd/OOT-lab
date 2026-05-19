@@ -12,6 +12,11 @@ import java.util.List;
  */
 public interface Editor {
     /**
+     * @return 编辑器类型
+     */
+    EditorKind kind();
+
+    /**
      * @return 当前编辑器对应的文件路径
      */
     Path file();
@@ -78,6 +83,48 @@ public interface Editor {
      * 执行拼写检查，并返回问题列表。
      */
     String spellCheck();
+
+    /**
+     * XML: 在目标元素前插入同级元素。
+     */
+    default String insertBefore(String tagName, String newId, String targetId, String textOrNull) {
+        return "(error) not supported";
+    }
+
+    /**
+     * XML: 在父元素下追加子元素。
+     */
+    default String appendChild(String tagName, String newId, String parentId, String textOrNull) {
+        return "(error) not supported";
+    }
+
+    /**
+     * XML: 修改元素 ID。
+     */
+    default String editId(String oldId, String newId) {
+        return "(error) not supported";
+    }
+
+    /**
+     * XML: 修改元素文本内容。
+     */
+    default String editText(String elementId, String textOrNull) {
+        return "(error) not supported";
+    }
+
+    /**
+     * XML: 删除元素（含子树）。
+     */
+    default String deleteElement(String elementId) {
+        return "(error) not supported";
+    }
+
+    /**
+     * XML: 输出树形结构。
+     */
+    default String xmlTree() {
+        return "(error) not supported";
+    }
 
     /**
      * @return 是否可以撤销
