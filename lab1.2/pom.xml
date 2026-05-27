@@ -22,6 +22,13 @@
       <version>${junit.jupiter.version}</version>
       <scope>test</scope>
     </dependency>
+
+    <!-- Used only by spell-check adapter(s) to parse LanguageTool JSON responses -->
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+      <version>2.11.0</version>
+    </dependency>
   </dependencies>
 
   <build>
@@ -45,6 +52,30 @@
             </manifest>
           </archive>
         </configuration>
+      </plugin>
+
+      <!-- Build a runnable fat-jar (includes runtime deps like gson) so `java -jar` works. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.6.0</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <createDependencyReducedPom>false</createDependencyReducedPom>
+              <shadedArtifactAttached>false</shadedArtifactAttached>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>edu.lab.cli.Main</mainClass>
+                </transformer>
+              </transformers>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

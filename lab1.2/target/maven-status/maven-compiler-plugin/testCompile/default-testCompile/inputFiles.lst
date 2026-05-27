@@ -9,6 +9,8 @@ F:\2.2nd_semester\OOT\lab1\lab1.2\src\test\java\edu\lab\core\events\SimpleEventB
 F:\2.2nd_semester\OOT\lab1\lab1.2\src\test\java\edu\lab\core\fs\LocalFileSystemTest.java
 F:\2.2nd_semester\OOT\lab1\lab1.2\src\test\java\edu\lab\core\logging\WorkspaceLogServiceTest.java
 F:\2.2nd_semester\OOT\lab1\lab1.2\src\test\java\edu\lab\core\persistence\PropertiesWorkspacePersistenceTest.java
+F:\2.2nd_semester\OOT\lab1\lab1.2\src\test\java\edu\lab\core\spell\LanguageToolHttpAdapterTest.java
+F:\2.2nd_semester\OOT\lab1\lab1.2\src\test\java\edu\lab\core\spell\SpellCheckServiceFactoryTest.java
 F:\2.2nd_semester\OOT\lab1\lab1.2\src\test\java\edu\lab\core\time\SystemClockTest.java
 F:\2.2nd_semester\OOT\lab1\lab1.2\src\test\java\edu\lab\core\workspace\WorkspaceServiceTest.java
 F:\2.2nd_semester\OOT\lab1\lab1.2\src\test\java\edu\lab\testkit\FakeClock.java

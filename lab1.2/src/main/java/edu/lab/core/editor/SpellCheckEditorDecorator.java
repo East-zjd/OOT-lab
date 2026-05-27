@@ -22,7 +22,8 @@ public final class SpellCheckEditorDecorator extends EditorDecorator {
         if (issues.isEmpty()) {
             return "(spell-check) OK";
         }
-        StringBuilder sb = new StringBuilder("拼写检查结果:\n");
+        String provider = spellCheckService.getClass().getSimpleName();
+        StringBuilder sb = new StringBuilder("拼写检查结果 (provider: ").append(provider).append("):\n");
         for (SpellCheckIssue issue : issues) {
             sb.append("第").append(issue.line())
                     .append("行，第").append(issue.col())

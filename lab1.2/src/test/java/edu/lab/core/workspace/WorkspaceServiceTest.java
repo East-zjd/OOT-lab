@@ -10,7 +10,6 @@ import edu.lab.core.logging.LogService;
 import edu.lab.core.logging.WorkspaceLogService;
 import edu.lab.core.persistence.PropertiesWorkspacePersistence;
 import edu.lab.core.persistence.WorkspacePersistence;
-import edu.lab.core.spell.DictionarySpellCheckAdapter;
 import edu.lab.core.spell.SpellCheckService;
 import edu.lab.core.stats.StatisticsService;
 import edu.lab.testkit.FakeClock;
@@ -22,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -42,7 +42,7 @@ class WorkspaceServiceTest {
         FakeClock clock = new FakeClock(LocalDateTime.of(2025, 10, 24, 9, 41, 33));
         EventBus bus = new SimpleEventBus();
         LogService log = new WorkspaceLogService(fs, clock, console);
-        SpellCheckService spellCheckService = DictionarySpellCheckAdapter.defaultEnglish();
+        SpellCheckService spellCheckService = lines -> List.of();
         StatisticsService stats = new StatisticsService(bus, clock);
         WorkspacePersistence persistence = new PropertiesWorkspacePersistence(fs, temp.resolve(".state.properties"));
 
@@ -97,7 +97,7 @@ class WorkspaceServiceTest {
         FakeClock clock = new FakeClock(LocalDateTime.of(2025, 10, 24, 9, 41, 33));
         EventBus bus = new SimpleEventBus();
         LogService log = new WorkspaceLogService(fs, clock, console);
-        SpellCheckService spellCheckService = DictionarySpellCheckAdapter.defaultEnglish();
+        SpellCheckService spellCheckService = lines -> List.of();
         StatisticsService stats = new StatisticsService(bus, clock);
         WorkspacePersistence persistence = new PropertiesWorkspacePersistence(fs, temp.resolve(".state.properties"));
 
@@ -122,7 +122,7 @@ class WorkspaceServiceTest {
         FakeClock clock = new FakeClock(LocalDateTime.of(2025, 10, 24, 9, 41, 33));
         EventBus bus = new SimpleEventBus();
         LogService log = new WorkspaceLogService(fs, clock, console);
-        SpellCheckService spellCheckService = DictionarySpellCheckAdapter.defaultEnglish();
+        SpellCheckService spellCheckService = lines -> List.of();
         StatisticsService stats = new StatisticsService(bus, clock);
         WorkspacePersistence persistence = new PropertiesWorkspacePersistence(fs, temp.resolve(".state.properties"));
 
@@ -150,7 +150,7 @@ class WorkspaceServiceTest {
         FakeClock clock = new FakeClock(LocalDateTime.of(2025, 10, 24, 9, 41, 33));
         EventBus bus = new SimpleEventBus();
         LogService log = new WorkspaceLogService(fs, clock, console);
-        SpellCheckService spellCheckService = DictionarySpellCheckAdapter.defaultEnglish();
+        SpellCheckService spellCheckService = lines -> List.of();
         StatisticsService stats = new StatisticsService(bus, clock);
         WorkspacePersistence persistence = new PropertiesWorkspacePersistence(fs, temp.resolve(".state.properties"));
 
@@ -178,7 +178,7 @@ class WorkspaceServiceTest {
         FakeClock clock = new FakeClock(LocalDateTime.of(2025, 10, 24, 9, 41, 33));
         EventBus bus = new SimpleEventBus();
         LogService log = new WorkspaceLogService(fs, clock, console);
-        SpellCheckService spellCheckService = DictionarySpellCheckAdapter.defaultEnglish();
+        SpellCheckService spellCheckService = lines -> List.of();
         StatisticsService stats = new StatisticsService(bus, clock);
         WorkspacePersistence persistence = new PropertiesWorkspacePersistence(fs, temp.resolve(".state.properties"));
 
@@ -214,7 +214,7 @@ class WorkspaceServiceTest {
         FakeClock clock = new FakeClock(LocalDateTime.of(2025, 10, 24, 9, 41, 33));
         EventBus bus = new SimpleEventBus();
         LogService log = new WorkspaceLogService(fs, clock, console);
-        SpellCheckService spellCheckService = DictionarySpellCheckAdapter.defaultEnglish();
+        SpellCheckService spellCheckService = lines -> List.of();
         StatisticsService stats = new StatisticsService(bus, clock);
         WorkspacePersistence persistence = new PropertiesWorkspacePersistence(fs, temp.resolve(".state.properties"));
 

@@ -30,10 +30,10 @@ F:\2.2nd_semester\OOT\lab1\lab1.2\src\main\java\edu\lab\core\logging\LogService.
 F:\2.2nd_semester\OOT\lab1\lab1.2\src\main\java\edu\lab\core\logging\WorkspaceLogService.java
 F:\2.2nd_semester\OOT\lab1\lab1.2\src\main\java\edu\lab\core\persistence\PropertiesWorkspacePersistence.java
 F:\2.2nd_semester\OOT\lab1\lab1.2\src\main\java\edu\lab\core\persistence\WorkspacePersistence.java
-F:\2.2nd_semester\OOT\lab1\lab1.2\src\main\java\edu\lab\core\spell\DictionarySpellCheckAdapter.java
 F:\2.2nd_semester\OOT\lab1\lab1.2\src\main\java\edu\lab\core\spell\LanguageToolHttpAdapter.java
 F:\2.2nd_semester\OOT\lab1\lab1.2\src\main\java\edu\lab\core\spell\SpellCheckIssue.java
 F:\2.2nd_semester\OOT\lab1\lab1.2\src\main\java\edu\lab\core\spell\SpellCheckService.java
+F:\2.2nd_semester\OOT\lab1\lab1.2\src\main\java\edu\lab\core\spell\SpellCheckServiceFactory.java
 F:\2.2nd_semester\OOT\lab1\lab1.2\src\main\java\edu\lab\core\stats\DurationFormatter.java
 F:\2.2nd_semester\OOT\lab1\lab1.2\src\main\java\edu\lab\core\stats\StatisticsService.java
 F:\2.2nd_semester\OOT\lab1\lab1.2\src\main\java\edu\lab\core\time\Clock.java
