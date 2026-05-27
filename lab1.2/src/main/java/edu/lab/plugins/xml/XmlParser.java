@@ -5,6 +5,8 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
+import org.xml.sax.SAXParseException;
+import org.xml.sax.helpers.DefaultHandler;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.StringReader;
@@ -30,12 +32,33 @@ public final class XmlParser {
             return new XmlDocument(root, hasLogHeader);
         }
         try {
-            Document doc = DocumentBuilderFactory.newInstance()
-                    .newDocumentBuilder()
-                    .parse(new InputSource(new StringReader(content)));
+            var factory = DocumentBuilderFactory.newInstance();
+            var builder = factory.newDocumentBuilder();
+            // 避免默认 ErrorHandler 往 stderr 打印 "[Fatal Error]"，改为抛异常并由上层统一处理。
+            builder.setErrorHandler(new DefaultHandler() {
+                @Override
+                public void error(SAXParseException e) throws SAXParseException {
+                    throw e;
+                }
+
+                @Override
+                public void fatalError(SAXParseException e) throws SAXParseException {
+                    throw e;
+                }
+
+                @Override
+                public void warning(SAXParseException e) {
+                    // ignore
+                }
+            });
+
+            Document doc = builder.parse(new InputSource(new StringReader(content)));
             Element rootEl = doc.getDocumentElement();
                 XmlElement root = toElement(rootEl, null, new HashSet<>());
             return new XmlDocument(root, hasLogHeader);
+        } catch (SAXParseException e) {
+            String msg = "line " + e.getLineNumber() + ", col " + e.getColumnNumber() + ": " + e.getMessage();
+            throw new IllegalArgumentException("invalid xml: " + msg);
         } catch (Exception e) {
             throw new IllegalArgumentException("invalid xml: " + e.getMessage());
         }

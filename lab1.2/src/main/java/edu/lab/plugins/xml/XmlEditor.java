@@ -144,6 +144,10 @@ public final class XmlEditor implements Editor {
 
     @Override
     public String insertBefore(String tagName, String newId, String targetId, String textOrNull) {
+        String tagErr = validateTagName(tagName);
+        if (tagErr != null) {
+            return tagErr;
+        }
         XmlElement target = document.findById(targetId);
         if (target == null) {
             return "目标元素不存在: " + targetId;
@@ -162,6 +166,10 @@ public final class XmlEditor implements Editor {
 
     @Override
     public String appendChild(String tagName, String newId, String parentId, String textOrNull) {
+        String tagErr = validateTagName(tagName);
+        if (tagErr != null) {
+            return tagErr;
+        }
         XmlElement parent = document.findById(parentId);
         if (parent == null) {
             return "父元素不存在: " + parentId;
@@ -235,6 +243,19 @@ public final class XmlEditor implements Editor {
         XmlElement element = new XmlElement(tagName, java.util.Map.of("id", id));
         element.setText(text);
         return element;
+    }
+
+    private String validateTagName(String tagName) {
+        if (tagName == null || tagName.isBlank()) {
+            return "非法 tagName: 不能为空";
+        }
+        String s = tagName.trim();
+        // 简化校验：兼容常见 XML Name（支持可选的命名空间前缀 ns:tag）。
+        // 规则：整体必须匹配 [A-Za-z_][A-Za-z0-9_.-]*(:[A-Za-z_][A-Za-z0-9_.-]*)?
+        if (!s.matches("[A-Za-z_][A-Za-z0-9_.-]*(?::[A-Za-z_][A-Za-z0-9_.-]*)?")) {
+            return "非法 tagName: " + s + "（XML 标签名不能以数字开头，且只能包含字母/数字/._- 及可选的前缀:）";
+        }
+        return null;
     }
 
     private String applyCommand(XmlCommand cmd) {

@@ -585,8 +585,14 @@ public final class WorkspaceService implements Workspace {
 
     private Editor createEditor(Path path, List<String> lines, boolean markSaved) {
         if (isXml(path)) {
-            Editor core = new XmlEditor(path, lines, spellCheckService);
-            return decorateXml(core, markSaved);
+            try {
+                Editor core = new XmlEditor(path, lines, spellCheckService);
+                return decorateXml(core, markSaved);
+            } catch (IllegalArgumentException e) {
+                // XML 不合法时不要让应用直接崩溃：降级为文本编辑器，让用户能够修复文件。
+                console.print("(warn) XML 解析失败，已按文本打开: " + path.getFileName() + " - " + e.getMessage() + "\n");
+                return decorateText(new TextEditor(path, lines, markSaved));
+            }
         }
         return decorateText(new TextEditor(path, lines, markSaved));
     }
