@@ -38,7 +38,10 @@ F:\2.2nd_semester\OOT\lab1\lab1.2\src\main\java\edu\lab\core\stats\DurationForma
 F:\2.2nd_semester\OOT\lab1\lab1.2\src\main\java\edu\lab\core\stats\StatisticsService.java
 F:\2.2nd_semester\OOT\lab1\lab1.2\src\main\java\edu\lab\core\time\Clock.java
 F:\2.2nd_semester\OOT\lab1\lab1.2\src\main\java\edu\lab\core\time\SystemClock.java
+F:\2.2nd_semester\OOT\lab1\lab1.2\src\main\java\edu\lab\core\workspace\DefaultEditorLabelFormatter.java
 F:\2.2nd_semester\OOT\lab1\lab1.2\src\main\java\edu\lab\core\workspace\DirTreePrinter.java
+F:\2.2nd_semester\OOT\lab1\lab1.2\src\main\java\edu\lab\core\workspace\DurationEditorLabelDecorator.java
+F:\2.2nd_semester\OOT\lab1\lab1.2\src\main\java\edu\lab\core\workspace\EditorLabelFormatter.java
 F:\2.2nd_semester\OOT\lab1\lab1.2\src\main\java\edu\lab\core\workspace\LineCol.java
 F:\2.2nd_semester\OOT\lab1\lab1.2\src\main\java\edu\lab\core\workspace\Workspace.java
 F:\2.2nd_semester\OOT\lab1\lab1.2\src\main\java\edu\lab\core\workspace\WorkspaceService.java
